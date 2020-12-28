@@ -1,14 +1,13 @@
 package server
 
 import (
+	"github.com/hitong/tRpc"
 	"log"
 	"net"
 	"time"
-
-	"github.com/hitong/tRpc"
 )
 
-func ListenAndServer(mgr *netRpc.TRpcMgr, serverAddr string) {
+func ListenAndServer(mgr *tRpc.TRpcMgr, serverAddr string) {
 	ls, err := net.Listen("tcp", serverAddr)
 	if err != nil {
 		log.Fatal(err)
@@ -17,7 +16,7 @@ func ListenAndServer(mgr *netRpc.TRpcMgr, serverAddr string) {
 	go Server(mgr, ls)
 }
 
-func Server(tRpcMgr *netRpc.TRpcMgr, listener net.Listener) <-chan bool {
+func Server(tRpcMgr *tRpc.TRpcMgr, listener net.Listener) <-chan bool {
 	stop := make(chan bool)
 	go func() {
 		for {
@@ -37,7 +36,7 @@ func Server(tRpcMgr *netRpc.TRpcMgr, listener net.Listener) <-chan bool {
 			select {
 			case <-tick:
 				tRpcMgr.Range(func(key, value interface{}) bool {
-					tRpc := value.(*netRpc.TRpc)
+					tRpc := value.(*tRpc.TRpc)
 					if tRpc.BeClosed {
 						log.Println("delete server key ", key)
 						tRpcMgr.DeleteKey(key.(string))

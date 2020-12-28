@@ -1,4 +1,4 @@
-package netRpc
+package tRpc
 
 import (
 	log "github.com/cihub/seelog"

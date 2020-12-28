@@ -2,16 +2,15 @@ package client
 
 import (
 	"context"
+	"github.com/hitong/tRpc"
 	"log"
 	"net"
 	"time"
-
-	"github.com/hitong/tRpc"
 )
 
-var tRpc *netRpc.TRpc
+var gRpc *tRpc.TRpc
 
-func DialAndServer(mgr *netRpc.TRpcMgr, addr string) (*netRpc.TRpc, error) {
+func DialAndServer(mgr *tRpc.TRpcMgr, addr string) (*tRpc.TRpc, error) {
 	conn, err := net.Dial("tcp", addr)
 	if err != nil {
 		log.Println(err)
@@ -22,24 +21,24 @@ func DialAndServer(mgr *netRpc.TRpcMgr, addr string) (*netRpc.TRpc, error) {
 	return ret, err
 }
 
-func DialAndServerWithReconnection(ctx context.Context, mgr *netRpc.TRpcMgr, addr string, t time.Duration) <-chan *netRpc.TRpc {
-	var tRpc *netRpc.TRpc
+func DialAndServerWithReconnection(ctx context.Context, mgr *tRpc.TRpcMgr, addr string, t time.Duration) <-chan *tRpc.TRpc {
+	var gRpc *tRpc.TRpc
 	for {
-		if tRpc, _ = DialAndServer(mgr, addr); tRpc != nil {
+		if gRpc, _ = DialAndServer(mgr, addr); gRpc != nil {
 			break
 		}
 	}
-	ch := make(chan *netRpc.TRpc, 1)
-	ch <- tRpc
+	ch := make(chan *tRpc.TRpc, 1)
+	ch <- gRpc
 	tick := time.Tick(t)
 	go func() {
 		for {
 			select {
 			case <-tick:
-				if tRpc == nil || tRpc.BeClosed {
+				if gRpc == nil || gRpc.BeClosed {
 					log.Println("reconnect")
-					if tRpc, _ = DialAndServer(mgr, addr); tRpc != nil {
-						ch <- tRpc
+					if gRpc, _ = DialAndServer(mgr, addr); gRpc != nil {
+						ch <- gRpc
 					}
 				}
 			case <-ctx.Done():
@@ -53,5 +52,5 @@ func DialAndServerWithReconnection(ctx context.Context, mgr *netRpc.TRpcMgr, add
 }
 
 func Rpc(receiver string, serviceName string, args ...interface{}) <-chan interface{} {
-	return tRpc.Send(receiver, serviceName, args...)
+	return gRpc.Send(receiver, serviceName, args...)
 }
