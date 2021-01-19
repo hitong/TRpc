@@ -8,8 +8,8 @@ import (
 	"sync"
 	"time"
 
+	log "github.com/cihub/seelog"
 	"github.com/globalsign/mgo/bson"
-	log "github.com/sirupsen/logrus"
 )
 
 type TRpcMgr struct {
@@ -37,8 +37,6 @@ type TRpcMessage struct {
 	Future   []interface{}
 	Error    error
 }
-
-const DefaultServerAddr = "192.168.92.167:12345"
 
 func DefaultKeyFunc(keySrc string) interface{} {
 	return keySrc
@@ -100,7 +98,7 @@ func (tRpc *TRpc) Server() {
 
 func (tRpc *TRpc) sendLoop() {
 	defer func() {
-		log.Println("send loop exit")
+		log.Warn("send loop exit",tRpc.Handle.RemoteAddr())
 	}()
 	for {
 		select {
@@ -116,21 +114,9 @@ func (tRpc *TRpc) sendLoop() {
 type Caller struct {
 }
 
-var c Caller
-
-func (c *Caller) HelloWorld(data map[string]interface{}) (map[string]interface{}, string) {
-	log.Println("hello world")
-	log.Println("data ", data)
-	return data, "dddddddddddddd"
-}
-
-func (c *Caller) LogDebug() string {
-	return "saaaaaaaaaa"
-}
-
 func (tRpc *TRpc) receiveLoop() {
 	defer func() {
-		log.Println("receive loop exit")
+		log.Warn("receive loop exit",tRpc.Handle.RemoteAddr())
 	}()
 	for {
 		receiveBuffer := &TRpcMessage{}
@@ -162,6 +148,11 @@ func (tRpc *TRpc) Close() {
 }
 
 func (tRpc *TRpc) CallFunc(msg *TRpcMessage) {
+	defer func() {
+		if err := recover();err != nil{
+			log.Error(err)
+		}
+	}()
 	if tRpc.register[msg.Receiver] == nil {
 		msg.Error = errors.New("Not registered Server " + msg.Receiver)
 		return
@@ -183,7 +174,7 @@ func (tRpc *TRpc) CallFunc(msg *TRpcMessage) {
 
 func (tRpc *TRpc) Send(receiver string, serviceName string, args ...interface{}) <-chan interface{} {
 	if tRpc == nil || tRpc.BeClosed {
-		log.Println("Connect not exist or has been closed")
+		log.Error("Connect not exist or has been closed ",tRpc.Handle.RemoteAddr())
 		return nil
 	}
 	msg := TRpcMessage{
@@ -204,7 +195,7 @@ func (tRpc *TRpc) Send(receiver string, serviceName string, args ...interface{})
 			return
 		}
 		defer func() {
-			log.Println("rpc time out")
+			log.Error("rpc time out ",serviceName)
 			if r := recover(); r != nil {
 			}
 		}()
